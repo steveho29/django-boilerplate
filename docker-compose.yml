@@ -1,0 +1,45 @@
+version: '3.0'
+
+services:
+  server:
+    image: python:latest
+    container_name: server 
+    volumes:
+      - .:/app
+    ports:
+      - 8080:8080
+    command: >
+      sh -c "
+        cd /app &&
+        python -m venv .venv
+        . .venv/bin/activate &&
+        pip install --upgrade pip &&
+        pip install -r requirements.txt &&
+        python manage.py makemigrations && 
+        python manage.py migrate && 
+        python manage.py runserver 0.0.0.0:8080 &&
+        tail -f /dev/null
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    image: mysql:latest
+    container_name: multiple-choice-mysql 
+    volumes:
+      - ./.db:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_HOST=localhost
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=db
+
+    healthcheck:
+      test: mysqladmin ping
+      timeout: 20s
+      retries: 10
+
+    restart: always
